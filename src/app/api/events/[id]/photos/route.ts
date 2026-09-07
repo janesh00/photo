@@ -58,6 +58,10 @@ export async function POST(request: Request, context: { params: { id: string } }
     return NextResponse.json({ photos }, { status: 201 });
   } catch (error) {
     console.error('Photo upload failed:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Photo upload failed.' }, { status: 502 });
+    const message = error instanceof Error ? error.message : '';
+    const userMessage = /access key|credentials|signature/i.test(message)
+      ? 'Photo storage credentials are invalid. Generate a new Supabase S3 access key pair and update Vercel.'
+      : 'Photo upload failed. Please try again.';
+    return NextResponse.json({ error: userMessage }, { status: 502 });
   }
 }
