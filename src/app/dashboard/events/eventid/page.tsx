@@ -30,12 +30,16 @@ export default function EventWorkspacePage() {
   async function upload() {
     if (!files?.length) return;
     setStatus('Uploading photographs...');
-    const body = new FormData();
-    Array.from(files).forEach((file) => body.append('files', file));
-    const response = await fetch(`/api/events/${eventId}/photos`, { method: 'POST', body });
-    const data = await response.json();
-    if (!response.ok) { setStatus(data.error || 'Upload failed.'); return; }
-    setFiles(null); setStatus(`${data.photos.length} photograph${data.photos.length === 1 ? '' : 's'} uploaded.`); await load();
+    try {
+      const body = new FormData();
+      Array.from(files).forEach((file) => body.append('files', file));
+      const response = await fetch(`/api/events/${eventId}/photos`, { method: 'POST', body });
+      const data = await response.json();
+      if (!response.ok) { setStatus(data.error || 'Upload failed.'); return; }
+      setFiles(null); setStatus(`${data.photos.length} photograph${data.photos.length === 1 ? '' : 's'} uploaded.`); await load();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+    }
   }
   async function createGallery() {
     if (!selected.length) return;
