@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  TEAM_MEMBER
+}
+
+enum PhotoStatus {
+  UPLOADING
+  READY
+  FAILED
+  DELETED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(TEAM_MEMBER)
+  events       EventMember[]
+  photos       Photo[]
+  eventsCreated Event[]      @relation("EventCreator")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  eventDate   DateTime
+  createdById String
+  createdBy   User          @relation("EventCreator", fields: [createdById], references: [id])
+  members     EventMember[]
+  photos      Photo[]
+  galleries   Gallery[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model EventMember {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model Photo {
+  id               String         @id @default(uuid())
+  eventId          String
+  uploadedById     String
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  fileSize         Int
+  status           PhotoStatus    @default(UPLOADING)
+  event            Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  uploader         User           @relation(fields: [uploadedById], references: [id])
+  galleryPhotos    GalleryPhoto[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([eventId])
+  @@index([uploadedById])
+}
+
+model Gallery {
+  id          String         @id @default(uuid())
+  eventId     String
+  slug        String         @unique
+  pinHash     String
+  published   Boolean        @default(false)
+  publishedAt DateTime?
+  event       Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  photos      GalleryPhoto[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([slug])
+  @@index([eventId])
+}
+
+model GalleryPhoto {
+  id        String   @id @default(uuid())
+  galleryId String
+  photoId   String
+  sortOrder Int      @default(0)
+  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([galleryId, photoId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model CustomerGallerySession {
+  id               String   @id @default(uuid())
+  galleryId        String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+}
